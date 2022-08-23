@@ -72,6 +72,21 @@ page 50701 "Window Connector"
                     CurrPage.Update(false);
                 end;
             }
+            action(Upload)
+            {
+                Caption = 'Upload';
+                Image = MoveUp;
+                Promoted = true;
+                PromotedCategory = Process;
+                PromotedIsBig = true;
+                PromotedOnly = true;
+                ApplicationArea = All;
+                trigger OnAction();
+                begin
+                    WinServicesConnector.Upload(Rec.Path);
+                    CurrPage.Update(false);
+                end;
+            }
         }
     }
 

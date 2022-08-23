@@ -17,7 +17,7 @@ codeunit 50700 WinServicesConnector
         JsonValue: JsonValue;
         OutPut: Text;
         UrlRequest: Text;
-        OptionMethod: Option ListAll,Download,Delete;
+        OptionMethod: Option ListAll,Download,Delete,Upload;
     begin
         httpContent.GetHeaders(httpHeader);
         UrlRequest := Get_Url('', OptionMethod::ListAll);
@@ -78,7 +78,7 @@ codeunit 50700 WinServicesConnector
         JsonArray: JsonArray;
         FileTxt: text;
         TempBlob: codeunit "Temp Blob";
-        OptionMethod: Option ListAll,Download,Delete;
+        OptionMethod: Option ListAll,Download,Delete,Upload;
     begin
         httpContent.GetHeaders(httpHeader);
         UrlRequest := Get_Url(NamePath, OptionMethod::Download);
@@ -97,29 +97,57 @@ codeunit 50700 WinServicesConnector
 
     procedure Delete(NamePath: Text[1000])
     var
+        TempBlob: codeunit "Temp Blob";
         httpClient: HttpClient;
         httpContent: HttpContent;
         httpHeader: HttpHeaders;
-        Istream: InStream;
-        UrlRequest: Text;
         httpResponse: HttpResponseMessage;
+        Istream: InStream;
         JsonArray: JsonArray;
-        TempBlob: codeunit "Temp Blob";
-        OptionMethod: Option ListAll,Download,Delete;
+        OptionMethod: Option ListAll,Download,Delete,Upload;
         OutPut: Text;
+        UrlRequest: Text;
     begin
         httpContent.GetHeaders(httpHeader);
         UrlRequest := Get_Url(NamePath, OptionMethod::Delete);
         if UrlRequest = '' then
             exit;
 
-        httpClient.Get(UrlRequest, httpResponse);
+        httpClient.Post(UrlRequest, httpContent, httpResponse);
         httpResponse.Content().ReadAs(OutPut);
     end;
 
-    procedure Get_Url(NamePath: Text[1000]; OptionMethod: Option ListAll,Download,Delete): Text
+    procedure Upload(NamePath: Text[1000])
     var
-        UrlLabel: Label '%1/%2%3';
+        httpClient: HttpClient;
+        httpContent: HttpContent;
+        httpHeader: HttpHeaders;
+        httpResponse: HttpResponseMessage;
+        InStream: InStream;
+        SelectZIPFileMsg: Label 'Select a File';
+        OptionMethod: Option ListAll,Download,Delete,Upload;
+        FileName: Text;
+        UrlRequest: Text;
+        OutPut: Text;
+    begin
+        if not UploadIntoStream(SelectZIPFileMsg, '', 'All Files (*.*)|*.*', FileName, InStream) then
+            Error('');
+
+        UrlRequest := Get_Url(NamePath, OptionMethod::Upload);
+        if UrlRequest = '' then
+            exit;
+
+        UrlRequest += FileName;
+
+        httpContent.GetHeaders(httpHeader);
+        httpContent.WriteFrom(InStream);
+        httpClient.Post(UrlRequest, httpContent, httpResponse);
+        httpResponse.Content().ReadAs(OutPut);
+    end;
+
+    procedure Get_Url(NamePath: Text[1000]; OptionMethod: Option ListAll,Download,Delete,Upload): Text
+    var
+        UrlLabel: Label '%1%2%3';
         WindowConnectorSetup: Record WindowConnectorSetup;
     begin
         WindowConnectorSetup.FindLast();
@@ -136,6 +164,13 @@ codeunit 50700 WinServicesConnector
                 2://Api_Delete
                     begin
                         exit(StrSubstNo(UrlLabel, WindowConnectorSetup.BaseUrl, 'Delete?Path=', NamePath))
+                    end;
+                3://Api_Upload
+                    begin
+                        if NamePath = '' then
+                            exit(StrSubstNo(UrlLabel, WindowConnectorSetup.BaseUrl, 'Upload?Path=', NamePath))
+                        else
+                            exit(StrSubstNo(UrlLabel, WindowConnectorSetup.BaseUrl, 'Upload?Path=', NamePath + '/'))
                     end;
 
             end;
